@@ -845,6 +845,7 @@ function gAdminSectionsAssets()
         'profileAvatar'  => GI18n::t('section.sidebar'),
         'sponsorIMG'     => GI18n::t('section.sponsor'),
         'enableIndexPage'=> GI18n::t('section.homepage'),
+        'modernLinkColumns' => GI18n::t('section.modern_link'),
         'footerCustom'   => GI18n::t('section.footer'),
         'autoNightSpan'  => GI18n::t('section.night'),
         'commentType'    => GI18n::t('section.comment'),
@@ -1337,6 +1338,23 @@ function themeConfig($form)
     $defaultArticlePath = new Typecho_Widget_Helper_Form_Element_Text('defaultArticlePath', null, 'index.php/blog', _t(GI18n::t('config.default_path')), _t(GI18n::t('config.default_path_desc')));
     $form->addInput($defaultArticlePath);
     /* ============================================================== */
+
+    /* ===== Modern Link page settings ===== */
+    $modernLinkColumns = new Typecho_Widget_Helper_Form_Element_Text('modernLinkColumns', null, '', _t(GI18n::t('config.modern_link_columns')), _t(GI18n::t('config.modern_link_columns_desc')));
+    $modernLinkColumns->input->setAttribute('type', 'number');
+    $modernLinkColumns->input->setAttribute('min', '1');
+    $modernLinkColumns->input->setAttribute('max', '6');
+    $modernLinkColumns->input->setAttribute('step', '1');
+    $form->addInput($modernLinkColumns);
+
+    $modernLinkDisplay = new Typecho_Widget_Helper_Form_Element_Select('modernLinkDisplay', array(
+        'all'     => _t(GI18n::t('config.modern_link_display_all')),
+        'flat'    => _t(GI18n::t('config.modern_link_display_flat')),
+        'grouped' => _t(GI18n::t('config.modern_link_display_grouped')),
+        'random'  => _t(GI18n::t('config.modern_link_display_random'))
+    ), 'all', _t(GI18n::t('config.modern_link_display')), _t(GI18n::t('config.modern_link_display_desc')));
+    $form->addInput($modernLinkDisplay);
+    /* ===================================== */
 
     $footerCustom = new Typecho_Widget_Helper_Form_Element_Textarea('footerCustom', null, null, _t(GI18n::t('config.footer_custom')), _t(GI18n::t('config.footer_custom_desc')));
     $form->addInput($footerCustom);
