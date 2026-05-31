@@ -1348,10 +1348,11 @@ function themeConfig($form)
     $form->addInput($modernLinkColumns);
 
     $modernLinkDisplay = new Typecho_Widget_Helper_Form_Element_Select('modernLinkDisplay', array(
+        'all'     => _t(GI18n::t('config.modern_link_display_all')),
         'flat'    => _t(GI18n::t('config.modern_link_display_flat')),
         'grouped' => _t(GI18n::t('config.modern_link_display_grouped')),
         'random'  => _t(GI18n::t('config.modern_link_display_random'))
-    ), 'flat', _t(GI18n::t('config.modern_link_display')), _t(GI18n::t('config.modern_link_display_desc')));
+    ), 'all', _t(GI18n::t('config.modern_link_display')), _t(GI18n::t('config.modern_link_display_desc')));
     $form->addInput($modernLinkDisplay);
     /* ===================================== */
 

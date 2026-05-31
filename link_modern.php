@@ -506,8 +506,10 @@ $this->need('components/header.php');
 <?php
 $modernLinkColumns = (int) $this->options->modernLinkColumns;
 $modernLinkDisplay = (string) $this->options->modernLinkDisplay;
-if (!in_array($modernLinkDisplay, array('flat', 'grouped', 'random'), true)) {
-    $modernLinkDisplay = 'flat';
+// 'all' lets visitors switch freely; flat/grouped/random lock the mode and hide
+// the switcher. Anything unset/legacy falls back to 'all' (visitor-selectable).
+if (!in_array($modernLinkDisplay, array('all', 'flat', 'grouped', 'random'), true)) {
+    $modernLinkDisplay = 'all';
 }
 $modernLinkColAttr = '';
 if ($modernLinkColumns >= 1 && $modernLinkColumns <= 6) {
@@ -621,12 +623,23 @@ if ($modernLinkColumns >= 1 && $modernLinkColumns <= 6) {
             var hasLost = lostCards.length > 0;
             var hasTodo = todoCards.length > 0;
 
-            // The toolbar is useful whenever there are cards: flat / random work
-            // for every list, grouped additionally when categories exist.
-            toolbar.hidden = false;
-            var groupedOption = select.querySelector('option[value="grouped"]');
-            if (groupedOption && !hasCategories) {
-                groupedOption.disabled = true;
+            // The backend can either let visitors choose ("all") or lock the page
+            // to a single display mode. Decide which based on data-default-display.
+            var configuredMode = (root && root.getAttribute('data-default-display')) || 'all';
+            var isLocked = (configuredMode === 'flat' || configuredMode === 'grouped' || configuredMode === 'random');
+
+            if (isLocked) {
+                // Backend forces a single display mode; hide the switcher.
+                toolbar.hidden = true;
+            } else {
+                // "All" mode: the toolbar is useful whenever there are cards —
+                // flat / random work for every list, grouped additionally when
+                // categories exist.
+                toolbar.hidden = false;
+                var groupedOption = select.querySelector('option[value="grouped"]');
+                if (groupedOption && !hasCategories) {
+                    groupedOption.disabled = true;
+                }
             }
 
             function shuffle(arr) {
@@ -731,17 +744,23 @@ if ($modernLinkColumns >= 1 && $modernLinkColumns <= 6) {
                 return mode;
             }
 
-            var defaultMode = (root && root.getAttribute('data-default-display')) || 'flat';
-            var stored = null;
-            try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) {}
-            var initialMode = stored || defaultMode;
-            if (initialMode === 'grouped' && !hasCategories) initialMode = 'flat';
-            applyState(initialMode);
+            if (isLocked) {
+                // Force the backend-configured mode; no persistence, no listener.
+                var lockedMode = configuredMode;
+                if (lockedMode === 'grouped' && !hasCategories) lockedMode = 'flat';
+                applyState(lockedMode);
+            } else {
+                var stored = null;
+                try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+                var initialMode = stored || 'flat';
+                if (initialMode === 'grouped' && !hasCategories) initialMode = 'flat';
+                applyState(initialMode);
 
-            select.addEventListener('change', function () {
-                var mode = applyState(select.value);
-                try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) {}
-            });
+                select.addEventListener('change', function () {
+                    var mode = applyState(select.value);
+                    try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) {}
+                });
+            }
         }
 
         if (document.readyState === 'loading') {
