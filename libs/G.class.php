@@ -48,6 +48,8 @@ class G
         'articleColumns' => '',
         'showArticleBanner' => '',
         'showArticleExcerpt' => '',
+        'modernLinkColumns' => '',
+        'modernLinkDisplay' => '',
     ];
 
     public static $advanceConfig = [];

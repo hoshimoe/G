@@ -106,6 +106,16 @@ $this->need('components/header.php');
         text-underline-offset: 3px;
     }
 
+    /* Remove list bullet markers in the hero body content */
+    #link-modern .modern-link-hero-inner .modern-link-desc ul,
+    #link-modern .modern-link-hero-inner .modern-link-desc ol,
+    #link-modern .modern-link-hero-inner .collapse-content-inner ul,
+    #link-modern .modern-link-hero-inner .collapse-content-inner ol {
+        list-style: none;
+        padding-left: 0;
+        margin-left: 0;
+    }
+
     /* ===== Collapse / details inside hero (fix invisible white-on-white text) ===== */
     #link-modern .modern-link-hero-inner .collapse-box {
         margin: 1.5rem 0;
@@ -200,32 +210,49 @@ $this->need('components/header.php');
         flex-wrap: wrap;
     }
 
-    #link-modern .modern-link-toggle {
+    /* ===== Display-mode dropdown ===== */
+    #link-modern .modern-link-control {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 8px 16px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: inherit;
+    }
+
+    #link-modern .modern-link-control-label {
+        opacity: 0.75;
+    }
+
+    #link-modern .modern-link-select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        padding: 8px 36px 8px 16px;
         font-size: 0.9rem;
         font-weight: 500;
         border-radius: 999px;
         cursor: pointer;
         color: #fff;
-        background: var(--gradient-primary, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+        background-color: transparent;
+        background-image: var(--gradient-primary, linear-gradient(135deg, #667eea 0%, #764ba2 100%)),
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat, no-repeat;
+        background-position: center, right 14px center;
+        background-size: cover, 10px;
         border: 1px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 6px 18px rgba(102, 126, 234, 0.28);
         transition: var(--transition-smooth, all 0.3s cubic-bezier(0.4, 0, 0.2, 1));
-        -webkit-user-select: none;
-        user-select: none;
     }
 
-    #link-modern .modern-link-toggle:hover {
+    #link-modern .modern-link-select:hover {
         transform: translateY(-2px);
         box-shadow: 0 10px 24px rgba(102, 126, 234, 0.35);
     }
 
-    #link-modern .modern-link-toggle .modern-link-toggle-icon {
-        font-size: 1rem;
-        line-height: 1;
+    #link-modern .modern-link-select option {
+        color: #333;
+        background: #fff;
     }
 
     #link-modern .modern-link-section {
@@ -297,6 +324,11 @@ $this->need('components/header.php');
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 22px;
+    }
+
+    /* Fixed column count when configured in the theme settings */
+    #link-modern[data-columns] .modern-link-grid {
+        grid-template-columns: repeat(var(--modern-link-columns), minmax(0, 1fr));
     }
 
     #link-modern .modern-link-card {
@@ -451,6 +483,10 @@ $this->need('components/header.php');
             grid-template-columns: 1fr;
             gap: 14px;
         }
+
+        #link-modern[data-columns] .modern-link-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     /* Respect reduced motion */
@@ -467,7 +503,18 @@ $this->need('components/header.php');
     }
 </style>
 
-<div id="link-modern">
+<?php
+$modernLinkColumns = (int) $this->options->modernLinkColumns;
+$modernLinkDisplay = (string) $this->options->modernLinkDisplay;
+if (!in_array($modernLinkDisplay, array('flat', 'grouped', 'random'), true)) {
+    $modernLinkDisplay = 'flat';
+}
+$modernLinkColAttr = '';
+if ($modernLinkColumns >= 1 && $modernLinkColumns <= 6) {
+    $modernLinkColAttr = ' data-columns="' . $modernLinkColumns . '" style="--modern-link-columns: ' . $modernLinkColumns . ';"';
+}
+?>
+<div id="link-modern" data-default-display="<?php echo $modernLinkDisplay; ?>"<?php echo $modernLinkColAttr; ?>>
     <section class="modern-link-hero" itemscope itemtype="http://schema.org/BlogPosting">
         <?php $img = G::getArticleFieldsBanner($this);
         if ($img != 'none'): ?>
@@ -482,17 +529,21 @@ $this->need('components/header.php');
     </section>
 
     <div class="modern-link-toolbar" hidden>
-        <button type="button" class="modern-link-toggle" id="modernLinkGroupToggle" aria-pressed="false">
-            <span class="modern-link-toggle-icon" aria-hidden="true">📁</span>
-            <span class="modern-link-toggle-text">按分類顯示</span>
-        </button>
+        <label class="modern-link-control">
+            <span class="modern-link-control-label">顯示方式</span>
+            <select class="modern-link-select" id="modernLinkDisplaySelect" aria-label="顯示方式">
+                <option value="flat">平鋪</option>
+                <option value="grouped">按分類</option>
+                <option value="random">隨機</option>
+            </select>
+        </label>
     </div>
 
     <div class="modern-link-grid" id="modernLinkGrid">
         <?php if (isset($this->options->plugins['activated']['Links'])) : ?>
             <?php
             Links_Plugin::output('
-                <a target="_blank" rel="noopener noreferrer" href="{url}" class="modern-link-card" title="{name}" data-sort="{sort}">
+                <a target="_blank" rel="noopener noreferrer" href="{url}" class="modern-link-card" title="{description}" data-sort="{sort}">
                     <img class="modern-link-avatar" src="{image}" alt="{name}" loading="lazy" onerror="this.style.visibility=\'hidden\'" />
                     <div class="modern-link-body">
                         <h4 class="modern-link-name">{name}</h4>
@@ -509,7 +560,7 @@ $this->need('components/header.php');
 
 <script>
     (function () {
-        var STORAGE_KEY = 'modernLinkGrouped';
+        var STORAGE_KEY = 'modernLinkDisplay';
         var LOST_PATTERN = /失\s*[联聯]|lost|offline|broken|下\s*[线線]|dead/i;
         var TODO_PATTERN = /待\s*[办辦]|todo|pending|問題|问题/i;
         // Category priority: prefix format "number|name" e.g. "1|好友" → priority 1, display "好友"
@@ -524,8 +575,9 @@ $this->need('components/header.php');
         function init() {
             var grid = document.getElementById('modernLinkGrid');
             var toolbar = document.querySelector('#link-modern .modern-link-toolbar');
-            var toggle = document.getElementById('modernLinkGroupToggle');
-            if (!grid || !toolbar || !toggle) return;
+            var select = document.getElementById('modernLinkDisplaySelect');
+            var root = document.getElementById('link-modern');
+            if (!grid || !toolbar || !select) return;
 
             var cards = Array.prototype.slice.call(grid.querySelectorAll('.modern-link-card'));
             if (!cards.length) return;
@@ -569,9 +621,21 @@ $this->need('components/header.php');
             var hasLost = lostCards.length > 0;
             var hasTodo = todoCards.length > 0;
 
-            // Show toolbar only when there is something to toggle.
-            if (hasCategories) {
-                toolbar.hidden = false;
+            // The toolbar is useful whenever there are cards: flat / random work
+            // for every list, grouped additionally when categories exist.
+            toolbar.hidden = false;
+            var groupedOption = select.querySelector('option[value="grouped"]');
+            if (groupedOption && !hasCategories) {
+                groupedOption.disabled = true;
+            }
+
+            function shuffle(arr) {
+                var a = arr.slice();
+                for (var i = a.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    var t = a[i]; a[i] = a[j]; a[j] = t;
+                }
+                return a;
             }
 
             function buildSection(title, items, extraClass) {
@@ -592,12 +656,13 @@ $this->need('components/header.php');
                 return section;
             }
 
-            function renderFlat() {
-                // Restore original flat layout, lost/todo links appended at end.
+            function renderFlatOrder(order) {
+                // Render the given card order as a flat grid, with lost/todo
+                // links collected into their own sections at the end.
                 grid.innerHTML = '';
                 // Remove any previously rendered sections after the grid.
                 removeRenderedSections();
-                originalOrder.forEach(function (c) {
+                order.forEach(function (c) {
                     if (lostCards.indexOf(c) === -1 && todoCards.indexOf(c) === -1) grid.appendChild(c);
                 });
                 var insertRef = grid.nextSibling;
@@ -610,6 +675,16 @@ $this->need('components/header.php');
                     var todoSection = buildSection('待辦星球', todoCards, 'is-todo modern-link-rendered-section');
                     grid.parentNode.insertBefore(todoSection, insertRef);
                 }
+            }
+
+            function renderFlat() {
+                // Restore original flat layout.
+                renderFlatOrder(originalOrder);
+            }
+
+            function renderRandom() {
+                // Shuffle the cards into a random flat order.
+                renderFlatOrder(shuffle(originalOrder));
             }
 
             function renderGrouped() {
@@ -643,36 +718,29 @@ $this->need('components/header.php');
                 grid.style.display = '';
             }
 
-            function applyState(grouped) {
-                toggle.setAttribute('aria-pressed', grouped ? 'true' : 'false');
-                var textEl = toggle.querySelector('.modern-link-toggle-text');
-                var iconEl = toggle.querySelector('.modern-link-toggle-icon');
-                if (grouped && hasCategories) {
-                    if (textEl) textEl.textContent = '平鋪顯示';
-                    if (iconEl) iconEl.textContent = '🗂';
+            function applyState(mode) {
+                if (mode === 'grouped' && hasCategories) {
                     renderGrouped();
+                } else if (mode === 'random') {
+                    renderRandom();
                 } else {
-                    if (textEl) textEl.textContent = '按分類顯示';
-                    if (iconEl) iconEl.textContent = '📁';
+                    mode = 'flat';
                     renderFlat();
                 }
+                if (select.value !== mode) select.value = mode;
+                return mode;
             }
 
-            // If grouping is unavailable, only the lost section will appear; hide the toggle.
-            if (!hasCategories) {
-                toggle.style.display = 'none';
-            }
-
+            var defaultMode = (root && root.getAttribute('data-default-display')) || 'flat';
             var stored = null;
             try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) {}
-            var initialGrouped = hasCategories && stored === '1';
-            applyState(initialGrouped);
+            var initialMode = stored || defaultMode;
+            if (initialMode === 'grouped' && !hasCategories) initialMode = 'flat';
+            applyState(initialMode);
 
-            toggle.addEventListener('click', function () {
-                if (!hasCategories) return;
-                var nowGrouped = toggle.getAttribute('aria-pressed') !== 'true';
-                applyState(nowGrouped);
-                try { localStorage.setItem(STORAGE_KEY, nowGrouped ? '1' : '0'); } catch (e) {}
+            select.addEventListener('change', function () {
+                var mode = applyState(select.value);
+                try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) {}
             });
         }
 
