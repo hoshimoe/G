@@ -3,9 +3,9 @@
     <div class="sliderbar-content" id="profile">
         <div class="profile-content">
             <div class="profile-avatar-container">
-                <img id="profile-avatar" src="<?php echo $this->options->profileAvatar; ?>" alt="avatar">
+                <img id="profile-avatar" src="<?php echo htmlspecialchars((string) $this->options->profileAvatar, ENT_QUOTES); ?>" alt="avatar">
             </div>
-            <div class="profile-cover" style="background-image:url(<?php echo $this->options->profileBG; ?>)"></div>
+            <div class="profile-cover" style="background-image:url('<?php echo htmlspecialchars((string) $this->options->profileBG, ENT_QUOTES); ?>')"></div>
             <h4><?php $this->author(); ?></h4>
             <i><?php echo $this->options->profileDes; ?></i>
             <div class="profile-meta clear">

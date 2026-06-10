@@ -90,16 +90,35 @@ class G
     {
         $background = "background";
         $regex = '@(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))@';
-        if (self::$config['background'] == '')
+        $value = self::cssSafe(self::$config['background']);
+        if ($value == '')
             return $background . ": #fff;";
-        else if (self::$config['background'] == 'bing')
+        else if ($value == 'bing')
         {
             $bingP = json_decode(file_get_contents('https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1'));
-            return $background . "-image: url(https://cn.bing.com" . $bingP->{'images'}[0]->{'url'} . ");";
+            return $background . "-image: url(https://cn.bing.com" . self::cssSafe($bingP->{'images'}[0]->{'url'}) . ");";
         }
-        else if (preg_match($regex, self::$config['background']) == 0)
-            return ($background . ": " . self::$config['background'] . ";");
-        return $background . "-image: url(" . self::$config['background'] . ");";
+        else if (preg_match($regex, $value) == 0)
+            return ($background . ": " . $value . ";");
+        return $background . "-image: url(" . $value . ");";
+    }
+
+    /**
+     * 清理将被写入内联 <style> 区块的值。
+     *
+     * 主題配色 / 圆角 / 背景等设置项会被直接插入页面的 <style> 内联样式中。
+     * 这些值虽由管理员配置，但为了纵深防御，移除可能突破 <style> 区块
+     * （`</style>` → 注入 <script>）或注入额外 CSS 规则的字符。
+     * 合法的颜色 / 渐变 / 长度值不会包含这些字符。
+     *
+     * @param string $value
+     * @return string
+     */
+    public static function cssSafe($value)
+    {
+        $value = is_string($value) ? $value : (string) $value;
+        // 去除 < > 防止突破 <style>；去除 { } ; 防止注入额外规则；去除反斜杠与控制字符。
+        return preg_replace('/[<>{}\\\\\x00-\x1F\x7F]/u', '', $value);
     }
 
     /**
@@ -109,9 +128,9 @@ class G
      */
     public static function setCSSValues()
     {
-        $themeColorRaw = self::$config["themeColor"] !== '' ? self::$config["themeColor"] : '#07F';
-        $secondaryColorRaw = self::$config["secondaryColor"] !== '' ? self::$config["secondaryColor"] : '#6A6A6A';
-        $alertColorRaw = self::$config["alertColor"] !== '' ? self::$config["alertColor"] : '#E74C3C';
+        $themeColorRaw = self::cssSafe(self::$config["themeColor"] !== '' ? self::$config["themeColor"] : '#07F');
+        $secondaryColorRaw = self::cssSafe(self::$config["secondaryColor"] !== '' ? self::$config["secondaryColor"] : '#6A6A6A');
+        $alertColorRaw = self::cssSafe(self::$config["alertColor"] !== '' ? self::$config["alertColor"] : '#E74C3C');
 
         // Required colors: never treated as "auto"
         $themeColor = self::resolveColor($themeColorRaw, $themeColorRaw);
@@ -119,8 +138,8 @@ class G
         $alertColor = self::resolveColor($alertColorRaw, $themeColorRaw);
 
         // Optional colors: support "auto" (or empty), derived from required colors
-        $headerColor = self::resolveColor(self::$config["headerColor"], $secondaryColorRaw, 'header');
-        $hoverColor = self::resolveColor(self::$config["hoverColor"], $themeColorRaw, 'hover');
+        $headerColor = self::resolveColor(self::cssSafe(self::$config["headerColor"]), $secondaryColorRaw, 'header');
+        $hoverColor = self::resolveColor(self::cssSafe(self::$config["hoverColor"]), $themeColorRaw, 'hover');
 
         $glass = self::$config["enableFrostedGlass"] == 1;
         $glassBlur = $glass ? 'blur(12px) saturate(140%)' : 'none';
@@ -139,17 +158,17 @@ class G
             --hover-color-bg: " . $hoverColor['bg'] . ";
             --theme-glass-blur: " . $glassBlur . ";
             --theme-glass-bg: " . $glassBg . ";
-            --theme-radius: " . self::$config["themeRadius"] . ";
+            --theme-radius: " . self::cssSafe(self::$config["themeRadius"]) . ";
             --theme-shadow: " . self::getBoxShadow(self::$config["themeShadow"]) . ";
         ";
         if (isset(self::$advanceConfig['customAnimationInDuration']))
-            $result .= "    --theme-animation-in-duration: " . self::$advanceConfig['customAnimationInDuration'] . ";\n        ";
+            $result .= "    --theme-animation-in-duration: " . self::cssSafe(self::$advanceConfig['customAnimationInDuration']) . ";\n        ";
         if (isset(self::$advanceConfig['customAnimationOutDuration']))
-            $result .= "    --theme-animation-out-duration: " . self::$advanceConfig['customAnimationOutDuration'] . ";\n    ";
+            $result .= "    --theme-animation-out-duration: " . self::cssSafe(self::$advanceConfig['customAnimationOutDuration']) . ";\n    ";
         if (isset(self::$advanceConfig['customHeaderOffsetX']))
-            $result .= "    --theme-header-offset-x: " . self::$advanceConfig['customHeaderOffsetX'] . ";\n    ";
+            $result .= "    --theme-header-offset-x: " . self::cssSafe(self::$advanceConfig['customHeaderOffsetX']) . ";\n    ";
         if (isset(self::$advanceConfig['customHeaderOffsetY']))
-            $result .= "    --theme-header-offset-y: " . self::$advanceConfig['customHeaderOffsetY'] . ";\n    ";
+            $result .= "    --theme-header-offset-y: " . self::cssSafe(self::$advanceConfig['customHeaderOffsetY']) . ";\n    ";
         $result .= "    }\n";
         if ($glass) {
             // Frosted-glass effect applied wherever --header-color is used as the background.
