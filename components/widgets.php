@@ -130,9 +130,9 @@
             </div>
         </div>
         <?php if ($this->options->profilePhoto != ''): ?>
-            <div class="widget widget-photo" style="background-image:url(<?php echo $this->options->profilePhoto; ?>)">
+            <div class="widget widget-photo" style="background-image:url('<?php echo htmlspecialchars((string) $this->options->profilePhoto, ENT_QUOTES); ?>')">
                 <?php if ($this->options->profileVideo != ''): ?>
-                    <video class="widget-video" loop muted autoplay src="<?php echo $this->options->profileVideo; ?>" poster="<?php echo $this->options->profilePhoto; ?>"></video>
+                    <video class="widget-video" loop muted autoplay src="<?php echo htmlspecialchars((string) $this->options->profileVideo, ENT_QUOTES); ?>" poster="<?php echo htmlspecialchars((string) $this->options->profilePhoto, ENT_QUOTES); ?>"></video>
                 <?php endif; ?>
                 <div>
                     <p><?php echo $this->options->profilePhotoDes; ?></p>

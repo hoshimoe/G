@@ -62,11 +62,11 @@ if (isset($_POST['DYLM'])) {
         
         window.G_CONFIG = {
             katex: <?php echo $this->options->enableKatex == 1 ? 'true' : 'false' ?>,
-            imgUrl: "<?php echo G::staticUrl('static/img/'); ?>",
+            imgUrl: <?php echo json_encode(G::staticUrl('static/img/'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES); ?>,
             autoTOC: <?php echo G::$config["enableDefaultTOC"] == 1 ? 'true' : 'false' ?>,
-            nightSpan: "<?php echo G::$config["autoNightSpan"]; ?>",
-            nightMode: "<?php echo G::$config["autoNightMode"]; ?>",
-            themeUrl: "<?php echo G::$themeUrl; ?>",
+            nightSpan: <?php echo json_encode((string) G::$config["autoNightSpan"], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES); ?>,
+            nightMode: <?php echo json_encode((string) G::$config["autoNightMode"], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES); ?>,
+            themeUrl: <?php echo json_encode(G::$themeUrl, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES); ?>,
         };
 
         function custom_callback() {
