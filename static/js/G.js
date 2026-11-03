@@ -472,7 +472,7 @@ let pageInit = () => {
 let doLazyload = () => {
   let banners = document.getElementsByClassName('article-banner')
   let pics = document.querySelectorAll(
-    'img:not(#header-background):not(#profile-avatar)'
+    'img:not(#header-background):not(#profile-avatar):not([data-g-nolazy])'
   )
   preLazy(banners, 'style', 'origin')
   preLazy(pics, 'src', 'origin', window.G_CONFIG.imgUrl + 'loading.gif')

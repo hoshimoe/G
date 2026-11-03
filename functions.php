@@ -1354,6 +1354,12 @@ function themeConfig($form)
         'random'  => _t(GI18n::t('config.modern_link_display_random'))
     ), 'all', _t(GI18n::t('config.modern_link_display')), _t(GI18n::t('config.modern_link_display_desc')));
     $form->addInput($modernLinkDisplay);
+
+    $modernLinkIntro = new Typecho_Widget_Helper_Form_Element_Radio('modernLinkIntro', array(
+        'top'    => _t(GI18n::t('config.modern_link_intro_top')),
+        'bottom' => _t(GI18n::t('config.modern_link_intro_bottom'))
+    ), 'top', _t(GI18n::t('config.modern_link_intro')), _t(GI18n::t('config.modern_link_intro_desc')));
+    $form->addInput($modernLinkIntro);
     /* ===================================== */
 
     $footerCustom = new Typecho_Widget_Helper_Form_Element_Textarea('footerCustom', null, null, _t(GI18n::t('config.footer_custom')), _t(GI18n::t('config.footer_custom_desc')));

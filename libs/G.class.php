@@ -50,6 +50,7 @@ class G
         'showArticleExcerpt' => '',
         'modernLinkColumns' => '',
         'modernLinkDisplay' => '',
+        'modernLinkIntro' => '',
     ];
 
     public static $advanceConfig = [];
@@ -1179,5 +1180,175 @@ class G
     public static function getArticleInfo($cid)
     {
         return Helper::widgetById('Contents', $cid);
+    }
+
+    /**
+     * 读取友情链接（供 link_modern.php 使用）
+     *
+     * 优先读取经典 Links 插件：经由它公开的 output() 输出，插件自己的显示状态、
+     * 排序与默认图片规则仍然生效；未启用时改读 NekoTypechoLinks。
+     * 两者都未启用时返回 null。
+     *
+     * @return array|null 每项含 name、url、sort、description、image
+     */
+    public static function getFriendLinks()
+    {
+        $options = Helper::options();
+        $plugins = $options->plugins;
+        $activated = (is_array($plugins) && isset($plugins['activated']) && is_array($plugins['activated']))
+            ? $plugins['activated'] : array();
+
+        if (isset($activated['Links']) && class_exists('Links_Plugin')) {
+            // Record/field separators that never appear in link data.
+            $pattern = "\x1e{name}\x1f{url}\x1f{sort}\x1f{description}\x1f{image}";
+            ob_start();
+            $returned = Links_Plugin::output($pattern, 0);
+            $raw = ob_get_clean();
+            if (is_string($returned)) {
+                $raw .= $returned;
+            }
+            $links = array();
+            foreach (explode("\x1e", $raw) as $record) {
+                $field = explode("\x1f", $record);
+                if (count($field) !== 5) {
+                    continue;
+                }
+                $links[] = array(
+                    'name' => $field[0],
+                    'url' => $field[1],
+                    'sort' => $field[2],
+                    'description' => $field[3],
+                    'image' => $field[4],
+                );
+            }
+            return $links;
+        }
+
+        if (isset($activated['NekoTypechoLinks']) && class_exists('NekoTypechoLinks_Plugin')) {
+            $order = 'priority';
+            try {
+                $configured = (string) $options->plugin('NekoTypechoLinks')->defaultOrder;
+                // The page has its own random mode; keep the base order stable.
+                if (in_array($configured, array('priority', 'sort', 'created'), true)) {
+                    $order = $configured;
+                }
+            } catch (Exception $e) {
+            }
+            $links = array();
+            foreach (NekoTypechoLinks_Plugin::getLinks(array('order' => $order)) as $row) {
+                $links[] = array(
+                    'name' => isset($row['name']) ? $row['name'] : '',
+                    'url' => isset($row['url']) ? $row['url'] : '',
+                    'sort' => isset($row['category']) ? $row['category'] : '',
+                    'description' => isset($row['description']) ? $row['description'] : '',
+                    'image' => isset($row['image']) ? $row['image'] : '',
+                );
+            }
+            return $links;
+        }
+
+        return null;
+    }
+
+    /**
+     * 整理单条友链的展示资料（供 link_modern.php 使用）
+     *
+     * kind：pin（置顶）、todo（待办）、lost（失联）或 link（一般）。
+     * sort 字段的「数字|名称」写法给出分组优先级与显示名称。
+     *
+     * @param array $link getFriendLinks() 的一项
+     * @return array
+     */
+    public static function friendLinkView($link)
+    {
+        $clean = function ($value) {
+            $value = (string) $value;
+            $collapsed = preg_replace('/\s+/u', ' ', $value);
+            return trim($collapsed === null ? $value : $collapsed);
+        };
+
+        $name = $clean(isset($link['name']) ? $link['name'] : '');
+        $description = $clean(isset($link['description']) ? $link['description'] : '');
+        $sort = $clean(isset($link['sort']) ? $link['sort'] : '');
+        $url = self::friendLinkUrl(isset($link['url']) ? $link['url'] : '', true);
+        $image = self::friendLinkUrl(isset($link['image']) ? $link['image'] : '', false);
+
+        // The classic Links plugin substitutes a generic placeholder for
+        // links without an image; a monogram reads better than that.
+        $imagePath = (string) parse_url($image, PHP_URL_PATH);
+        if ($image !== '' && preg_match('#/plugins/Links/nopic\.png$#i', $imagePath)) {
+            $image = '';
+        }
+
+        if (preg_match('/失\s*[联聯]|lost|offline|broken|下\s*[线線]|dead/iu', $sort)) {
+            $kind = 'lost';
+        } elseif (preg_match('/待\s*[办辦]|todo|pending|問題|问题/iu', $sort)) {
+            $kind = 'todo';
+        } elseif (preg_match('/^(?:\d+\s*\|\s*)?(?:pin|pinned|sticky|top|featured|置[顶頂]|精[选選])$/iu', $sort)) {
+            $kind = 'pin';
+        } else {
+            $kind = 'link';
+        }
+
+        $priority = null;
+        $label = $sort;
+        if (preg_match('/^(\d+)\s*\|\s*(.+)$/u', $sort, $m)) {
+            $priority = (int) $m[1];
+            $label = trim($m[2]);
+        }
+
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        if (strpos($host, 'xn--') !== false && function_exists('idn_to_utf8')) {
+            $decoded = @idn_to_utf8($host, 0, INTL_IDNA_VARIANT_UTS46);
+            if ($decoded) {
+                $host = $decoded;
+            }
+        }
+        $host = preg_replace('/^www\./', '', $host);
+
+        $initial = '#';
+        if (preg_match('/[\p{L}\p{N}]/u', $name, $m)) {
+            $initial = function_exists('mb_strtoupper') ? mb_strtoupper($m[0], 'UTF-8') : strtoupper($m[0]);
+        }
+
+        return array(
+            'name' => $name,
+            'description' => $description,
+            'url' => $url,
+            'image' => $image,
+            'kind' => $kind,
+            'group' => $sort,
+            'label' => $label,
+            'priority' => $priority,
+            'host' => $host,
+            'initial' => $initial,
+            'hue' => abs(crc32($name)) % 360,
+        );
+    }
+
+    /**
+     * 规范化友链里的地址
+     *
+     * 保留 http(s)、协议相对与站内地址；没写协议的域名补上 https://；
+     * 其他协议（如 javascript:）一律丢弃。
+     *
+     * @param string $url
+     * @param bool $allowMailto
+     * @return string
+     */
+    public static function friendLinkUrl($url, $allowMailto)
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+        if (preg_match('#^(?:https?:)?//#i', $url) || preg_match('#^[/?\#]#', $url)) {
+            return $url;
+        }
+        // A scheme has no dots and is not followed by a port number.
+        if (preg_match('#^[a-z][a-z0-9+\-]*:(?!\d)#i', $url)) {
+            return ($allowMailto && preg_match('#^mailto:#i', $url)) ? $url : '';
+        }
+        return 'https://' . $url;
     }
 }
