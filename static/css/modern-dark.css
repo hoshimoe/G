@@ -177,55 +177,29 @@ html::-webkit-scrollbar-thumb {
 }
 
 /* ===== Modern Link Page - Dark Mode ===== */
-/* The link_modern.php page carries its own scoped <style> block in the
-   document body, which (being later in source order) would otherwise win
-   ties against this stylesheet. The `html` prefix raises specificity so the
-   dark overrides reliably apply to the link text and category titles. */
-#link-modern .modern-link-card {
-    background: rgba(30, 32, 44, 0.55);
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+/* link_modern.php keeps its styles in a scoped <style> block and reads every
+   colour from --ml-* tokens. The `html` prefix outranks that block, which
+   comes later in source order. */
+html #link-modern {
+    --ml-ink: rgba(255, 255, 255, 0.92);
+    --ml-ink-2: rgba(255, 255, 255, 0.64);
+    --ml-ink-3: rgba(255, 255, 255, 0.42);
+    --ml-card: rgba(255, 255, 255, 0.045);
+    --ml-card-hover: rgba(255, 255, 255, 0.085);
+    --ml-line: rgba(255, 255, 255, 0.08);
+    --ml-line-2: rgba(255, 255, 255, 0.16);
+    --ml-field: rgba(255, 255, 255, 0.06);
+    --ml-thumb: rgba(255, 255, 255, 0.14);
+    --ml-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+    --ml-shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.22), 0 16px 32px -16px rgba(0, 0, 0, 0.75);
+    --ml-avatar-bg: rgba(255, 255, 255, 0.1);
+    --ml-mono-s: 26%;
+    --ml-mono-l: 24%;
+    --ml-mono-ink: 80%;
+    --ml-todo: #e3b45c;
+    --ml-lost: #ec8f9b;
 }
 
-html #link-modern .modern-link-name {
-    color: rgba(255, 255, 255, 0.92);
-}
-
-html #link-modern .modern-link-description {
-    color: rgba(255, 255, 255, 0.65);
-}
-
-#link-modern .modern-link-avatar {
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-#link-modern .modern-link-empty {
-    background: rgba(30, 32, 44, 0.55);
-    color: rgba(255, 255, 255, 0.7);
-}
-
-html #link-modern .modern-link-section-title {
-    color: rgba(255, 255, 255, 0.92);
-    border-bottom-color: rgba(255, 255, 255, 0.12);
-}
-
-html #link-modern .modern-link-section-count {
-    color: rgba(255, 255, 255, 0.7);
-    background: rgba(255, 255, 255, 0.08);
-}
-
-html #link-modern .modern-link-section.is-todo .modern-link-section-count {
-    color: #fbbf24;
-    background: rgba(234, 179, 8, 0.18);
-}
-
-html #link-modern .modern-link-section.is-lost .modern-link-section-count {
-    color: #f87171;
-    background: rgba(245, 87, 108, 0.18);
-}
-
-/* Display-mode dropdown popup options stay readable on dark backgrounds. */
-html #link-modern .modern-link-select option {
-    color: #ddd;
-    background: #2c2a2a;
+html #link-modern .ml-seg-thumb {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--ml-line);
 }

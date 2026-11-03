@@ -18,6 +18,15 @@
  *   switching between languages is idempotent and round-trips cleanly:
  *   for any rendered language L the user sees a deterministic projection
  *   of the original content rather than a chain of conversions.
+ * - Pages can mark further regions with [data-g-translate] (e.g. the
+ *   friend-link cards). Those are converted in place, text node by text
+ *   node, so page scripts that hold references to them keep working; each
+ *   text node remembers its original value for the round trip. Elements
+ *   with translate="no" are skipped. Their text is written in whatever
+ *   script its author used, so it follows the chosen language even when
+ *   that matches the page's own language.
+ * - [data-g-translate-mount], when present, receives the selector instead
+ *   of the top of the article.
  */
 
 ;(function () {
@@ -109,6 +118,67 @@
     }
   }
 
+  // Original text of nodes inside [data-g-translate] regions.
+  const extraOriginals = new WeakMap()
+
+  function findContent() {
+    return document.querySelector('.post-content.PAP-content, #page-content.PAP-content')
+  }
+
+  /**
+   * Regions marked [data-g-translate] within scope (scope itself included),
+   * excluding anything already covered by the main content element.
+   */
+  function findExtraRegions(scope) {
+    const base = scope || document
+    const regions = Array.prototype.slice.call(base.querySelectorAll('[data-g-translate]'))
+    if (scope && scope.nodeType === 1 && scope.hasAttribute('data-g-translate')) {
+      regions.unshift(scope)
+    }
+    const contentEl = findContent()
+    return regions.filter(function (el) {
+      return !(contentEl && contentEl.contains(el))
+    })
+  }
+
+  /**
+   * Convert one region in place from each text node's original value.
+   * A null map restores the originals.
+   */
+  function convertRegionInPlace(root, map) {
+    const stack = [root]
+    while (stack.length) {
+      const node = stack.pop()
+      if (!node) continue
+      if (node.nodeType === 3 /* TEXT_NODE */) {
+        let original = extraOriginals.get(node)
+        if (original === undefined) {
+          original = node.nodeValue
+          extraOriginals.set(node, original)
+        }
+        const next = map ? convertText(original, map) : original
+        if (node.nodeValue !== next) node.nodeValue = next
+        continue
+      }
+      if (node.nodeType !== 1 /* ELEMENT_NODE */) continue
+      if (SKIP_TAGS[node.tagName] || node.getAttribute('translate') === 'no') continue
+      for (let c = node.firstChild; c; c = c.nextSibling) {
+        stack.push(c)
+      }
+    }
+  }
+
+  function applyExtraRegions(targetLang, scope) {
+    const regions = findExtraRegions(scope)
+    if (!regions.length) return
+    let map = null
+    if (targetLang !== ORIGINAL_VALUE && SUPPORTED_LANGS[targetLang]) {
+      if (!ensureMaps()) return
+      map = (targetLang === 'zh-CN') ? tsMap : stMap
+    }
+    regions.forEach(function (region) { convertRegionInPlace(region, map) })
+  }
+
   /**
    * Show notification message (uses showToast if available, falls back to console)
    */
@@ -175,7 +245,9 @@
    * idempotent and stable across repeated invocations.
    */
   function applyLang(targetLang) {
-    const contentEl = document.querySelector('.post-content.PAP-content, #page-content.PAP-content')
+    applyExtraRegions(targetLang)
+
+    const contentEl = findContent()
     if (!contentEl) return
 
     // Always restore the original first; this guarantees that switching
@@ -221,7 +293,7 @@
   /**
    * Create the language selector UI
    */
-  function createSelector(container) {
+  function createSelector(container, append) {
     const wrapper = document.createElement('div')
     wrapper.id = 'content-lang-selector'
     wrapper.className = 'content-lang-selector'
@@ -257,21 +329,23 @@
 
     wrapper.appendChild(label)
     wrapper.appendChild(select)
-    container.insertBefore(wrapper, container.firstChild)
+    if (append) container.appendChild(wrapper)
+    else container.insertBefore(wrapper, container.firstChild)
   }
 
   /**
    * Initialize content translation
    */
   function initTranslation() {
-    const contentEl = document.querySelector('.post-content.PAP-content, #page-content.PAP-content')
-    if (!contentEl) return
+    const contentEl = findContent()
+    const hasExtraRegions = findExtraRegions().length > 0
+    if (!contentEl && !hasExtraRegions) return
 
     // Remove existing selector (e.g. on pjax re-init)
     const existingSelector = document.getElementById('content-lang-selector')
     if (existingSelector) existingSelector.remove()
 
-    originalContent = contentEl.innerHTML
+    originalContent = contentEl ? contentEl.innerHTML : ''
     sourceLang = detectSourceLang()
 
     const savedLang = getSavedLang()
@@ -282,17 +356,33 @@
       saveLang(currentLang)
     }
 
-    const articleEl = contentEl.parentElement
-    if (articleEl) createSelector(articleEl)
+    const mount = document.querySelector('[data-g-translate-mount]')
+    if (mount) {
+      createSelector(mount, true)
+    } else {
+      const articleEl = contentEl && contentEl.parentElement
+      if (articleEl) createSelector(articleEl)
+    }
 
     // Apply conversion if needed (no network call required).
     if (currentLang !== ORIGINAL_VALUE &&
         SUPPORTED_LANGS[currentLang] &&
         currentLang !== sourceLang) {
       applyLang(currentLang)
+    } else {
+      applyExtraRegions(currentLang)
     }
+  }
+
+  /**
+   * Apply the current language to [data-g-translate] regions inside scope.
+   * For pages that insert such regions after initialization.
+   */
+  function refreshTranslation(scope) {
+    if (currentLang) applyExtraRegions(currentLang, scope)
   }
 
   // Expose for pjax re-initialization (called by pageInit)
   window.initContentTranslation = initTranslation
+  window.refreshContentTranslation = refreshTranslation
 })()
